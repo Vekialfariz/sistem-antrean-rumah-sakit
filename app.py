@@ -9,21 +9,19 @@ def get_db_connection():
     return conn
 
 def diagnosa_poli(gejala):
-    gejala = gejala.lower()
-    
-    # Pemetaan kata kunci yang lebih luas
+    gejala = gejala.lower().strip()
+    # Pemetaan kata kunci ke ID Poli
     keywords = {
-        4: ["gigi", "gusi", "geraham", "bolong", "behel", "cabut gigi"],
-        3: ["jantung", "nyeri dada", "sesak napas", "debar", "aritmia"],
-        5: ["mata", "kabur", "minus", "katarak", "perih", "merah"],
-        2: ["demam", "batuk", "flu", "lambung", "tipes", "diabetes", "mual"],
-        6: ["stroke", "saraf", "kejang", "migrain", "lumpuh"]
+        4: ["gigi", "gusi", "geraham", "bolong", "behel", "cabut"], # Poli Gigi
+        3: ["jantung", "dada", "sesak", "debar", "aritmia"],         # Poli Jantung
+        5: ["mata", "kabur", "minus", "katarak", "perih"],           # Poli Mata
+        2: ["demam", "batuk", "flu", "lambung", "mual", "pusing"],   # Poli Umum/Dalam
+        6: ["stroke", "saraf", "kejang", "migrain"]                  # Poli Saraf
     }
-
     for id_poli, kunci in keywords.items():
         if any(kata in gejala for kata in kunci):
             return id_poli
-    return 1  # Kembali ke Poli Umum jika tidak ada yang cocok
+    return 1 # Default ke Poli Umum
 
 @app.route('/')
 def index():
@@ -39,30 +37,50 @@ def daftar_antrean():
         return jsonify({"status": "error", "pesan": "Nama dan Gejala wajib diisi"}), 400
 
     id_poli = diagnosa_poli(gejala)
-    
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
-        # Hitung nomor antrean
         cur.execute('SELECT COUNT(*) FROM antrean WHERE id_poli = ?', (id_poli,))
         nomor_baru = cur.fetchone()[0] + 1
 
-        # Simpan ke DB
         cur.execute('''INSERT INTO antrean (nama_pasien, gejala, id_poli, nomor_urut) 
                        VALUES (?, ?, ?, ?)''', (nama, gejala, id_poli, nomor_baru))
         conn.commit()
 
-        # Ambil nama poli dari DB
         cur.execute('SELECT nama_poli FROM poli WHERE id_poli = ?', (id_poli,))
-        nama_poli = cur.fetchone()['nama_poli']
+        row = cur.fetchone()
+        nama_poli = row['nama_poli'] if row else "Poli Umum"
 
-        return jsonify({
-            "status": "sukses",
-            "nama": nama,
-            "poli": nama_poli,
-            "nomor": nomor_baru
-        })
+        return jsonify({"status": "sukses", "nama": nama, "poli": nama_poli, "nomor": nomor_baru})
+    except Exception as e:
+        return jsonify({"status": "error", "pesan": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/admin')
+def admin_dashboard():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    # Mengambil ID Antrean agar bisa dihapus nantinya
+    cur.execute('''
+        SELECT antrean.id_antrean, antrean.nama_pasien, antrean.nomor_urut, antrean.gejala, poli.nama_poli 
+        FROM antrean 
+        JOIN poli ON antrean.id_poli = poli.id_poli
+        ORDER BY antrean.id_antrean DESC
+    ''')
+    semua_antrean = cur.fetchall()
+    conn.close()
+    return render_template('admin.html', antrean=semua_antrean)
+
+@app.route('/hapus_antrean/<int:id_antrean>', methods=['POST'])
+def hapus_antrean(id_antrean):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute('DELETE FROM antrean WHERE id_antrean = ?', (id_antrean,))
+        conn.commit()
+        return jsonify({"status": "sukses"})
     except Exception as e:
         return jsonify({"status": "error", "pesan": str(e)}), 500
     finally:
