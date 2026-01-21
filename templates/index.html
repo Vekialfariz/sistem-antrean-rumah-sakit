@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Smart RS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card-pendaftaran { max-width: 500px; margin: 50px auto; border-radius: 15px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .header-rs { background: #007bff; color: white; padding: 20px; border-radius: 15px 15px 0 0; text-align: center; }
+        #notif { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="card card-pendaftaran">
+    <div class="header-rs">
+        <h4>Registrasi Pasien Online</h4>
+        <p class="mb-0">Sistem Deteksi Otomatis Poli</p>
+    </div>
+    <div class="p-4">
+        <div id="notif" class="alert alert-success"></div>
+        
+        <div class="mb-3">
+            <label class="form-label">Nama Lengkap Pasien</label>
+            <input type="text" id="nama" class="form-control" placeholder="Contoh: Budi Santoso">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Ceritakan Keluhan Anda</label>
+            <textarea id="gejala" class="form-control" rows="3" placeholder="Contoh: Saya merasa sakit gigi sejak kemarin malam"></textarea>
+        </div>
+        <button onclick="prosesDaftar()" class="btn btn-primary w-100 py-2">Ambil Antrean</button>
+    </div>
+</div>
+
+<script>
+async function prosesDaftar() {
+    const nama = document.getElementById('nama').value;
+    const gejala = document.getElementById('gejala').value;
+    const notif = document.getElementById('notif');
+
+    const response = await fetch('/daftar', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({nama, gejala})
+    });
+
+    const hasil = await response.json();
+
+    if(hasil.status === 'sukses') {
+        notif.style.display = 'block';
+        notif.className = 'alert alert-success';
+        notif.innerHTML = `
+            <strong>Pendaftaran Berhasil!</strong><br>
+            Pasien: ${hasil.nama}<br>
+            Tujuan: <b>${hasil.poli}</b><br>
+            Nomor Antrean: <b class="fs-4">#${hasil.nomor}</b>
+        `;
+    } else {
+        alert("Gagal: " + hasil.pesan);
+    }
+}
+</script>
+</body>
+</html>
