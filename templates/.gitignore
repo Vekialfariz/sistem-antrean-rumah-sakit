@@ -1,0 +1,17 @@
+# Database lokal (sangat penting agar data antrean lokal tidak terunggah)
+*.db
+
+# Folder cache Python (file otomatis yang dibuat saat menjalankan app.py)
+__pycache__/
+*.py[cod]
+
+# Virtual Environment (jika Anda menggunakannya)
+venv/
+env/
+ENV/
+
+# File log dan error
+*.log
+
+# File rahasia (seperti API key jika ada)
+.env
